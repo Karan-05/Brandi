@@ -139,6 +139,10 @@ function isAbortError(error: unknown) {
   return error instanceof Error && error.name === "TimeoutError";
 }
 
+export function createGroqProvider(apiKey: string): LlmProvider {
+  return new OpenAiLlmProvider(apiKey, DEFAULT_GROQ_MODEL, DEFAULT_LLM_TIMEOUT_MS, GROQ_BASE_URL, JSON_OBJECT_FORMAT);
+}
+
 export function createDefaultLlmProvider(): LlmProvider {
   const groqKey = process.env.GROQ_API_KEY;
   if (groqKey) {

@@ -24,39 +24,51 @@ function createDefaultDependencies(): WebsiteClassifierDependencies {
 
 let defaultDependencies: WebsiteClassifierDependencies | undefined;
 
-function getDefaultDependencies() {
+export function getDefaultDependencies(): WebsiteClassifierDependencies {
   defaultDependencies ??= createDefaultDependencies();
   return defaultDependencies;
 }
+
+// Coalesces concurrent in-flight requests for the same normalized URL so we
+// never fire duplicate scrapes. The first caller does the work; later callers
+// waiting on the same URL get the same promise. Each key is deleted on settle.
+const inFlight = new Map<string, Promise<ClassifyApiSuccess>>();
 
 export async function classifyWebsite(
   rawUrl: string,
   dependencies?: WebsiteClassifierDependencies,
 ): Promise<ClassifyApiSuccess> {
   const startedAt = performance.now();
-
-  // Validate URL before touching any external dependency
   const { submittedUrl, normalizedUrl } = normalizeAndValidateUrl(rawUrl);
-
   const deps = dependencies ?? getDefaultDependencies();
-  const cachedResult = deps.cache.get(normalizedUrl);
 
+  const cachedResult = deps.cache.get(normalizedUrl);
   if (cachedResult) {
-    return {
-      ...cachedResult,
-      cached: true,
-    };
+    return { ...cachedResult, cached: true };
   }
 
+  const existing = inFlight.get(normalizedUrl);
+  if (existing) return existing;
+
+  const promise = performWork(submittedUrl, normalizedUrl, deps, startedAt).finally(() =>
+    inFlight.delete(normalizedUrl),
+  );
+  inFlight.set(normalizedUrl, promise);
+  return promise;
+}
+
+async function performWork(
+  submittedUrl: string,
+  normalizedUrl: string,
+  deps: WebsiteClassifierDependencies,
+  startedAt: number,
+): Promise<ClassifyApiSuccess> {
   const scrapeStartedAt = performance.now();
   const page = await deps.scraper.scrape(normalizedUrl);
   const scrapeMs = Math.round(performance.now() - scrapeStartedAt);
 
   const classifyStartedAt = performance.now();
-  const classification = await deps.llm.classify({
-    url: normalizedUrl,
-    page,
-  });
+  const classification = await deps.llm.classify({ url: normalizedUrl, page });
   const classifyMs = Math.round(performance.now() - classifyStartedAt);
 
   const result = buildResponse({ submittedUrl, normalizedUrl, classification });
@@ -102,12 +114,4 @@ function logTiming(metrics: { normalizedUrl: string; scrapeMs: number; classifyM
   if (process.env.NODE_ENV === "development") {
     console.info("[classifier]", metrics);
   }
-}
-
-export function createClassifierDependencies(overrides: Partial<WebsiteClassifierDependencies>) {
-  return {
-    scraper: overrides.scraper ?? createDefaultScraper(),
-    llm: overrides.llm ?? createDefaultLlmProvider(),
-    cache: overrides.cache ?? new TTLCache<string, CachedClassification>(CACHE_TTL_MS),
-  };
 }

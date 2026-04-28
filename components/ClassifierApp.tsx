@@ -1,12 +1,15 @@
 "use client";
 
+import { ApiKeysPanel } from "@/components/ApiKeysPanel";
 import { CategoryStats } from "@/components/CategoryStats";
 import { ClassificationHistory } from "@/components/ClassificationHistory";
 import { UrlClassifierForm } from "@/components/UrlClassifierForm";
+import { useApiKeys } from "@/hooks/useApiKeys";
 import { useClassificationHistory } from "@/hooks/useClassificationHistory";
 
 export function ClassifierApp() {
   const { history, addResult, clearHistory } = useClassificationHistory();
+  const { keys, updateKeys, clearKeys } = useApiKeys();
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-10 px-4 py-10 sm:px-6 lg:px-8">
@@ -24,8 +27,8 @@ export function ClassifierApp() {
                 Classify any webpage, instantly.
               </h1>
               <p className="max-w-md text-base leading-7 text-ink/65">
-                Paste a URL. The page is scraped, content trimmed, and an LLM assigns a category with a confidence
-                score and explanation — in seconds.
+                Paste a URL. The page is scraped, content trimmed, and an LLM assigns a category
+                with a confidence score and explanation — in seconds.
               </p>
             </div>
 
@@ -38,7 +41,8 @@ export function ClassifierApp() {
 
           <div className="rounded-[1.75rem] border border-black/[0.06] bg-gradient-to-br from-white via-white to-blush/40 p-1 shadow-panel">
             <div className="rounded-[1.5rem] border border-black/[0.05] bg-white/95 p-5 sm:p-6">
-              <UrlClassifierForm onSuccess={addResult} />
+              <UrlClassifierForm onSuccess={addResult} apiKeys={keys} />
+              <ApiKeysPanel keys={keys} onChange={updateKeys} onClear={clearKeys} />
             </div>
           </div>
         </div>

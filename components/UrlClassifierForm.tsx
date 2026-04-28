@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { LoadingState } from "@/components/LoadingState";
 import { ResultCard } from "@/components/ResultCard";
+import type { ApiKeys } from "@/hooks/useApiKeys";
 import type { ClassifyApiError, ClassifyApiSuccess } from "@/lib/types";
 
 type FormState =
@@ -14,6 +15,7 @@ type FormState =
 
 type UrlClassifierFormProps = {
   onSuccess?: (result: ClassifyApiSuccess) => void;
+  apiKeys?: ApiKeys;
 };
 
 const CATEGORIES = [
@@ -23,18 +25,24 @@ const CATEGORIES = [
   { label: "Other", color: "bg-stone-400" },
 ];
 
-export function UrlClassifierForm({ onSuccess }: UrlClassifierFormProps) {
+export function UrlClassifierForm({ onSuccess, apiKeys }: UrlClassifierFormProps) {
   const [url, setUrl] = useState("");
   const [state, setState] = useState<FormState>({ status: "idle" });
+
+  const hasByokKeys = Boolean(apiKeys?.firecrawlKey || apiKeys?.groqKey);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setState({ status: "loading" });
 
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (apiKeys?.firecrawlKey) headers["x-firecrawl-key"] = apiKeys.firecrawlKey;
+    if (apiKeys?.groqKey) headers["x-groq-key"] = apiKeys.groqKey;
+
     try {
       const response = await fetch("/api/classify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ url }),
       });
 
@@ -63,6 +71,13 @@ export function UrlClassifierForm({ onSuccess }: UrlClassifierFormProps) {
 
   return (
     <div className="space-y-5">
+      {hasByokKeys && (
+        <div className="flex items-center gap-1.5 rounded-full border border-accent/15 bg-accent/8 px-2.5 py-1 w-fit">
+          <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+          <span className="text-[10px] font-semibold text-accent">Using your API keys</span>
+        </div>
+      )}
+
       <form className="space-y-3" onSubmit={handleSubmit}>
         <label className="text-sm font-medium text-ink/75" htmlFor="website-url">
           Enter a public URL
