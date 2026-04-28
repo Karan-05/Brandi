@@ -221,6 +221,11 @@ function BatchRow({ item, last }: { item: BatchItem; last: boolean }) {
         <span className="shrink-0 text-[11px] font-semibold tabular-nums text-ink/55">
           {pct}%
         </span>
+        {result.reclassified && (
+          <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700">
+            re-classified
+          </span>
+        )}
         {result.cached && (
           <span className="shrink-0 rounded-full border border-black/[0.07] bg-white px-1.5 py-0.5 text-[9px] text-ink/35">
             cached

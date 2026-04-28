@@ -6,7 +6,7 @@ import type { Classification, ClassifyApiSuccess } from "@/lib/types";
 
 const CACHE_TTL_MS = 20 * 60 * 1000;
 
-type CachedClassification = Omit<ClassifyApiSuccess, "cached">;
+type CachedClassification = Omit<ClassifyApiSuccess, "cached" | "timingMs">;
 
 export type WebsiteClassifierDependencies = {
   scraper: Scraper;
@@ -71,7 +71,12 @@ async function performWork(
   const classification = await deps.llm.classify({ url: normalizedUrl, page });
   const classifyMs = Math.round(performance.now() - classifyStartedAt);
 
-  const result = buildResponse({ submittedUrl, normalizedUrl, classification });
+  const result = buildResponse({
+    submittedUrl,
+    normalizedUrl,
+    classification,
+    reclassified: classification.reclassified ?? false,
+  });
   deps.cache.set(normalizedUrl, result);
 
   logTiming({
@@ -96,10 +101,12 @@ function buildResponse({
   submittedUrl,
   normalizedUrl,
   classification,
+  reclassified,
 }: {
   submittedUrl: string;
   normalizedUrl: string;
   classification: Classification;
+  reclassified: boolean;
 }): CachedClassification {
   return {
     submittedUrl,
@@ -107,6 +114,7 @@ function buildResponse({
     category: classification.category,
     confidence: Number(classification.confidence.toFixed(2)),
     explanation: classification.explanation,
+    reclassified: reclassified || undefined,
   };
 }
 

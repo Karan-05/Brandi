@@ -55,9 +55,16 @@ export function ResultCard({ result }: ResultCardProps) {
             <span className={`h-2.5 w-2.5 rounded-full ${s.dot}`} />
             <span className={`text-sm font-semibold tracking-wide ${s.text}`}>{result.category}</span>
           </div>
-          <span className="rounded-full border border-black/[0.07] bg-white/80 px-3 py-0.5 text-[11px] font-medium text-ink/55">
-            {result.cached ? "Cached" : "Fresh"}
-          </span>
+          <div className="flex items-center gap-2">
+            {result.reclassified && (
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                Re-classified
+              </span>
+            )}
+            <span className="rounded-full border border-black/[0.07] bg-white/80 px-3 py-0.5 text-[11px] font-medium text-ink/55">
+              {result.cached ? "Cached" : "Fresh"}
+            </span>
+          </div>
         </div>
 
         <div className="mt-5 flex items-end gap-1.5">

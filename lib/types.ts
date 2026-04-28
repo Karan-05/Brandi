@@ -20,6 +20,7 @@ export const classifySuccessSchema = classificationSchema.extend({
   submittedUrl: z.string().url(),
   normalizedUrl: z.string().url(),
   cached: z.boolean(),
+  reclassified: z.boolean().optional(),
   timingMs: timingSchema.optional(),
 });
 

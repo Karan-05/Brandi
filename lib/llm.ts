@@ -6,6 +6,11 @@ const DEFAULT_LLM_TIMEOUT_MS = 12_000;
 const DEFAULT_OPENAI_MODEL = "gpt-4.1-mini";
 const DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
 
+// Models used when primary classification confidence falls below threshold
+const GROQ_FALLBACK_MODEL = "qwen-qwq-32b";
+const OPENAI_FALLBACK_MODEL = "gpt-4.1";
+const CONFIDENCE_THRESHOLD = 0.65;
+
 const OPENAI_BASE_URL = "https://api.openai.com/v1/chat/completions";
 const GROQ_BASE_URL = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -41,7 +46,7 @@ const STRICT_JSON_SCHEMA_FORMAT = {
 const JSON_OBJECT_FORMAT = { type: "json_object" as const };
 
 export interface LlmProvider {
-  classify(input: ClassificationPromptInput): Promise<Classification>;
+  classify(input: ClassificationPromptInput): Promise<Classification & { reclassified?: boolean }>;
 }
 
 type OpenAiResponse = {
@@ -139,21 +144,45 @@ function isAbortError(error: unknown) {
   return error instanceof Error && error.name === "TimeoutError";
 }
 
+// Retries with a stronger fallback model when primary confidence < CONFIDENCE_THRESHOLD.
+// Returns the fallback result (which typically has higher confidence) with reclassified=true.
+class WithFallbackProvider implements LlmProvider {
+  constructor(
+    private readonly primary: OpenAiLlmProvider,
+    private readonly fallback: OpenAiLlmProvider,
+  ) {}
+
+  async classify(
+    input: ClassificationPromptInput,
+  ): Promise<Classification & { reclassified?: boolean }> {
+    const result = await this.primary.classify(input);
+    if (result.confidence >= CONFIDENCE_THRESHOLD) return result;
+    const fallbackResult = await this.fallback.classify(input);
+    return { ...fallbackResult, reclassified: true };
+  }
+}
+
 export function createGroqProvider(apiKey: string): LlmProvider {
-  return new OpenAiLlmProvider(apiKey, DEFAULT_GROQ_MODEL, DEFAULT_LLM_TIMEOUT_MS, GROQ_BASE_URL, JSON_OBJECT_FORMAT);
+  const primary = new OpenAiLlmProvider(apiKey, DEFAULT_GROQ_MODEL, DEFAULT_LLM_TIMEOUT_MS, GROQ_BASE_URL, JSON_OBJECT_FORMAT);
+  const fallback = new OpenAiLlmProvider(apiKey, GROQ_FALLBACK_MODEL, DEFAULT_LLM_TIMEOUT_MS, GROQ_BASE_URL, JSON_OBJECT_FORMAT);
+  return new WithFallbackProvider(primary, fallback);
 }
 
 export function createDefaultLlmProvider(): LlmProvider {
   const groqKey = process.env.GROQ_API_KEY;
   if (groqKey) {
     const model = process.env.LLM_MODEL || DEFAULT_GROQ_MODEL;
-    return new OpenAiLlmProvider(groqKey, model, DEFAULT_LLM_TIMEOUT_MS, GROQ_BASE_URL, JSON_OBJECT_FORMAT);
+    const primary = new OpenAiLlmProvider(groqKey, model, DEFAULT_LLM_TIMEOUT_MS, GROQ_BASE_URL, JSON_OBJECT_FORMAT);
+    const fallback = new OpenAiLlmProvider(groqKey, GROQ_FALLBACK_MODEL, DEFAULT_LLM_TIMEOUT_MS, GROQ_BASE_URL, JSON_OBJECT_FORMAT);
+    return new WithFallbackProvider(primary, fallback);
   }
 
   const openaiKey = process.env.OPENAI_API_KEY || process.env.LLM_API_KEY;
   if (openaiKey) {
     const model = process.env.LLM_MODEL || DEFAULT_OPENAI_MODEL;
-    return new OpenAiLlmProvider(openaiKey, model);
+    const primary = new OpenAiLlmProvider(openaiKey, model);
+    const fallback = new OpenAiLlmProvider(openaiKey, OPENAI_FALLBACK_MODEL);
+    return new WithFallbackProvider(primary, fallback);
   }
 
   throw new ClassificationFailedError(
