@@ -1,15 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import { ApiKeysPanel } from "@/components/ApiKeysPanel";
+import { BatchClassifierForm } from "@/components/BatchClassifierForm";
 import { CategoryStats } from "@/components/CategoryStats";
 import { ClassificationHistory } from "@/components/ClassificationHistory";
 import { UrlClassifierForm } from "@/components/UrlClassifierForm";
 import { useApiKeys } from "@/hooks/useApiKeys";
 import { useClassificationHistory } from "@/hooks/useClassificationHistory";
 
+type Mode = "single" | "batch";
+
 export function ClassifierApp() {
   const { history, addResult, clearHistory } = useClassificationHistory();
   const { keys, updateKeys, clearKeys } = useApiKeys();
+  const [mode, setMode] = useState<Mode>("single");
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-10 px-4 py-10 sm:px-6 lg:px-8">
@@ -41,7 +46,19 @@ export function ClassifierApp() {
 
           <div className="rounded-[1.75rem] border border-black/[0.06] bg-gradient-to-br from-white via-white to-blush/40 p-1 shadow-panel">
             <div className="rounded-[1.5rem] border border-black/[0.05] bg-white/95 p-5 sm:p-6">
-              <UrlClassifierForm onSuccess={addResult} apiKeys={keys} />
+              <div className="mb-5 flex items-center gap-1 rounded-xl border border-black/[0.06] bg-black/[0.025] p-1">
+                <ModeTab active={mode === "single"} onClick={() => setMode("single")}>
+                  Single URL
+                </ModeTab>
+                <ModeTab active={mode === "batch"} onClick={() => setMode("batch")}>
+                  Batch
+                </ModeTab>
+              </div>
+              {mode === "single" ? (
+                <UrlClassifierForm onSuccess={addResult} apiKeys={keys} />
+              ) : (
+                <BatchClassifierForm onSuccess={addResult} apiKeys={keys} />
+              )}
               <ApiKeysPanel keys={keys} onChange={updateKeys} onClear={clearKeys} />
             </div>
           </div>
@@ -55,6 +72,30 @@ export function ClassifierApp() {
         </section>
       )}
     </main>
+  );
+}
+
+function ModeTab({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all ${
+        active
+          ? "bg-white text-ink shadow-sm"
+          : "text-ink/40 hover:text-ink/65"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
