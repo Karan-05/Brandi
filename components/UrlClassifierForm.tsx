@@ -16,6 +16,13 @@ type UrlClassifierFormProps = {
   onSuccess?: (result: ClassifyApiSuccess) => void;
 };
 
+const CATEGORIES = [
+  { label: "Ecommerce", color: "bg-amber-400" },
+  { label: "Social / UGC", color: "bg-sky-400" },
+  { label: "News / Media", color: "bg-emerald-500" },
+  { label: "Other", color: "bg-stone-400" },
+];
+
 export function UrlClassifierForm({ onSuccess }: UrlClassifierFormProps) {
   const [url, setUrl] = useState("");
   const [state, setState] = useState<FormState>({ status: "idle" });
@@ -27,9 +34,7 @@ export function UrlClassifierForm({ onSuccess }: UrlClassifierFormProps) {
     try {
       const response = await fetch("/api/classify", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       });
 
@@ -37,7 +42,9 @@ export function UrlClassifierForm({ onSuccess }: UrlClassifierFormProps) {
 
       if (!response.ok || "error" in payload) {
         const message =
-          "error" in payload ? payload.error.message : "The classifier could not process this page. Please try again.";
+          "error" in payload
+            ? payload.error.message
+            : "The classifier could not process this page. Please try again.";
         setState({ status: "error", message });
         return;
       }
@@ -55,19 +62,16 @@ export function UrlClassifierForm({ onSuccess }: UrlClassifierFormProps) {
   const isLoading = state.status === "loading";
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-2xl text-ink">Try a public webpage</h2>
-        <p className="text-sm leading-6 text-ink/68">
-          The server validates the URL, scrapes the single page, and returns a structured classification result.
-        </p>
-      </div>
+    <div className="space-y-5">
+      <form className="space-y-3" onSubmit={handleSubmit}>
+        <label className="text-sm font-medium text-ink/75" htmlFor="website-url">
+          Enter a public URL
+        </label>
 
-      <form className="space-y-4" onSubmit={handleSubmit}>
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-ink" htmlFor="website-url">
-            Website URL
-          </label>
+        <div className="relative">
+          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink/35">
+            <LinkIcon />
+          </span>
           <input
             id="website-url"
             name="url"
@@ -76,9 +80,9 @@ export function UrlClassifierForm({ onSuccess }: UrlClassifierFormProps) {
             autoComplete="url"
             placeholder="https://example.com"
             value={url}
-            onChange={(event) => setUrl(event.target.value)}
+            onChange={(e) => setUrl(e.target.value)}
             disabled={isLoading}
-            className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-base text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent/10 disabled:cursor-not-allowed disabled:bg-stone-50"
+            className="w-full rounded-2xl border border-black/10 bg-white py-3 pl-10 pr-4 text-sm text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent/10 disabled:cursor-not-allowed disabled:opacity-60"
             required
           />
         </div>
@@ -86,22 +90,71 @@ export function UrlClassifierForm({ onSuccess }: UrlClassifierFormProps) {
         <button
           type="submit"
           disabled={isLoading}
-          className="inline-flex w-full items-center justify-center rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-accent/90 focus:outline-none focus:ring-4 focus:ring-accent/20 disabled:cursor-not-allowed disabled:bg-accent/50"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-accent/90 focus:outline-none focus:ring-4 focus:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isLoading ? "Classifying…" : "Classify website"}
+          {isLoading ? (
+            <>
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              Classifying…
+            </>
+          ) : (
+            <>
+              Classify
+              <ArrowIcon />
+            </>
+          )}
         </button>
       </form>
 
       <div className="min-h-36 space-y-4">
-        {state.status === "loading" ? <LoadingState /> : null}
-        {state.status === "error" ? <ErrorMessage message={state.message} /> : null}
-        {state.status === "success" ? <ResultCard result={state.result} /> : null}
-        {state.status === "idle" ? (
-          <div className="rounded-3xl border border-dashed border-black/10 bg-white/55 px-4 py-5 text-sm leading-6 text-ink/58">
-            Results appear here after you submit a public URL. Repeated URLs may be served from the in-memory cache.
+        {state.status === "loading" && <LoadingState />}
+        {state.status === "error" && <ErrorMessage message={state.message} />}
+        {state.status === "success" && <ResultCard result={state.result} />}
+        {state.status === "idle" && (
+          <div className="rounded-3xl border border-dashed border-black/10 px-5 py-6">
+            <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-ink/35">Detects</p>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+              {CATEGORIES.map(({ label, color }) => (
+                <div key={label} className="flex items-center gap-2">
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${color}`} />
+                  <span className="text-xs text-ink/60">{label}</span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-5 text-xs leading-5 text-ink/38">
+              Results appear after you submit a URL. Repeated URLs are served from a 20-min cache.
+            </p>
           </div>
-        ) : null}
+        )}
       </div>
     </div>
+  );
+}
+
+function LinkIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M8.5 6.5L6.5 8.5M9.5 4.5l.56-.56a3.536 3.536 0 0 1 5 5L14 10M5 10.5l-.56.56a3.536 3.536 0 0 1-5-5L1 5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ArrowIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M2 6.5h9M7.5 3l3.5 3.5L7.5 10"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

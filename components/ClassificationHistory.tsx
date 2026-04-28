@@ -5,7 +5,14 @@ const badgeStyles: Record<Category, string> = {
   Ecommerce: "bg-amber-100 text-amber-800",
   "Social / UGC": "bg-sky-100 text-sky-800",
   "News / Media": "bg-emerald-100 text-emerald-800",
-  Other: "bg-stone-100 text-stone-800",
+  Other: "bg-stone-100 text-stone-700",
+};
+
+const barStyles: Record<Category, string> = {
+  Ecommerce: "bg-amber-400",
+  "Social / UGC": "bg-sky-400",
+  "News / Media": "bg-emerald-500",
+  Other: "bg-stone-400",
 };
 
 function timeAgo(ts: number): string {
@@ -37,37 +44,59 @@ export function ClassificationHistory({
 
   return (
     <div>
-      <div className="mb-3 flex items-baseline justify-between">
+      <div className="mb-4 flex items-baseline justify-between">
         <h2 className="text-sm font-semibold text-ink/70">Recent Classifications</h2>
         <button
           onClick={onClear}
-          className="text-xs text-ink/40 underline underline-offset-2 transition hover:text-ink/70"
+          className="text-xs text-ink/35 underline underline-offset-2 transition hover:text-ink/65"
         >
           Clear history
         </button>
       </div>
+
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {history.map((entry) => (
-          <div
-            key={`${entry.normalizedUrl}-${entry.classifiedAt}`}
-            className="rounded-2xl border border-black/5 bg-canvas/60 p-4"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <p className="truncate text-sm font-medium text-ink/85">{getDomain(entry.normalizedUrl)}</p>
-              <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${badgeStyles[entry.category]}`}>
-                {entry.category}
-              </span>
+        {history.map((entry) => {
+          const confidencePct = Math.round(entry.confidence * 100);
+          return (
+            <div
+              key={`${entry.normalizedUrl}-${entry.classifiedAt}`}
+              className="rounded-2xl border border-black/[0.06] bg-canvas/50 p-4 transition-colors hover:bg-canvas/80"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="truncate text-sm font-medium text-ink/85">{getDomain(entry.normalizedUrl)}</p>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${badgeStyles[entry.category]}`}
+                >
+                  {entry.category}
+                </span>
+              </div>
+
+              <div className="mt-3">
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-ink/35">
+                    Confidence
+                  </span>
+                  <span className="text-[10px] font-semibold text-ink/45">{confidencePct}%</span>
+                </div>
+                <div className="h-1 w-full overflow-hidden rounded-full bg-black/[0.06]">
+                  <div
+                    className={`h-full rounded-full ${barStyles[entry.category]}`}
+                    style={{ width: `${confidencePct}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                {entry.cached && (
+                  <span className="rounded-full bg-stone-100 px-1.5 py-0.5 text-[10px] text-stone-500">cached</span>
+                )}
+                <span className="ml-auto text-[10px] text-ink/30">{timeAgo(entry.classifiedAt)}</span>
+              </div>
+
+              <p className="mt-2 line-clamp-2 text-xs leading-5 text-ink/48">{entry.explanation}</p>
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <span className="text-xs text-ink/50">{Math.round(entry.confidence * 100)}% confidence</span>
-              {entry.cached && (
-                <span className="rounded-full bg-stone-100 px-1.5 py-0.5 text-xs text-stone-500">cached</span>
-              )}
-              <span className="ml-auto text-xs text-ink/35">{timeAgo(entry.classifiedAt)}</span>
-            </div>
-            <p className="mt-2 line-clamp-2 text-xs leading-5 text-ink/50">{entry.explanation}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
