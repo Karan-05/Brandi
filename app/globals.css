@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  min-height: 100%;
+  background:
+    radial-gradient(circle at top left, rgba(242, 198, 109, 0.24), transparent 28%),
+    radial-gradient(circle at top right, rgba(33, 84, 70, 0.14), transparent 26%),
+    linear-gradient(180deg, #f8f5ee 0%, #f3ede2 100%);
+}
+
+body {
+  min-height: 100vh;
+  color: #1d241c;
+  font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0.52)),
+    linear-gradient(135deg, rgba(33, 84, 70, 0.06), transparent 45%);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  letter-spacing: -0.02em;
+}
+
+* {
+  border-color: rgba(29, 36, 28, 0.12);
+}
+
+::selection {
+  background: rgba(33, 84, 70, 0.18);
+}
